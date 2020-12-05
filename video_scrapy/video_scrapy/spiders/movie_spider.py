@@ -14,8 +14,6 @@ class MovieSpiderSpider(Spider):
     allowed_domains = ['movie.douban.com']
     movieStart = 0
     movieLimit = 100
-    client = pymongo.MongoClient("127.0.0.1", 27017)
-    db = client["movie_system"]
     # tvStart = 0
     # tvLimit = 20
     startUrl = 'https://movie.douban.com/explore'
