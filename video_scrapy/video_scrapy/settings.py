@@ -98,7 +98,8 @@ DOWNLOAD_HANDLERS = {
 MONGO_URL = '8.129.178.143'
 MONGO_PORT = 27017
 MONGO_DB = 'movie_system'
-
+MONGO_USER = 'Ikarosx'
+MONGO_PASSWORD = 'newLife2016'
 ITEM_PIPELINES = {
     'video_scrapy.pipelines.MongoDBPipeline': 300,
     #  'scrapy_redis.pipelines.RedisPipeline': 301

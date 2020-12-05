@@ -7,9 +7,12 @@
 import pymongo
 import logging
 from scrapy.exceptions import DropItem
+
+
 class VideoScrapyPipeline(object):
     def process_item(self, item, spider):
         return item
+
 
 class MongoDBPipeline(object):
     def __init__(self, mongourl, mongoport, mongodb, username, password):
@@ -39,9 +42,9 @@ class MongoDBPipeline(object):
         '''
         1、连接mongodb数据
         '''
-        self.client = pymongo.MongoClient(self.mongourl, self.mongoport)
+        self.client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % (self.username, self.password, self.mongourl, self.mongoport, self.mongodb))
         self.db = self.client[self.mongodb]
-        self.db.authenticate(self.username, self.password)
+        # self.db.authenticate(self.username, self.password)
 
     def process_item(self, item, spider):
         '''
@@ -58,9 +61,10 @@ class MongoDBPipeline(object):
         else:
             # 存在更新
             logging.debug('更新数据%s' % (item['title']))
-            self.db['movie'].update_one({"id": item['id']}, {"$set":dict(item)})
-        return item  
-         
+            self.db['movie'].update_one(
+                {"id": item['id']}, {"$set": dict(item)})
+        return item
+
     def close_spider(self, spider):
-        #关闭数据库
+        # 关闭数据库
         self.client.close()
