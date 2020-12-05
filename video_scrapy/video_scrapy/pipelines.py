@@ -12,13 +12,15 @@ class VideoScrapyPipeline(object):
         return item
 
 class MongoDBPipeline(object):
-    def __init__(self, mongourl, mongoport, mongodb):
+    def __init__(self, mongourl, mongoport, mongodb, username, password):
         '''
         初始化mongodb数据的url、端口号、数据库名称
         '''
         self.mongourl = mongourl
         self.mongoport = mongoport
         self.mongodb = mongodb
+        self.username = username
+        self.password = password
 
     @classmethod
     def from_crawler(cls, crawler):
@@ -28,7 +30,9 @@ class MongoDBPipeline(object):
         return cls(
             mongourl=crawler.settings.get("MONGO_URL"),
             mongoport=crawler.settings.get("MONGO_PORT"),
-            mongodb=crawler.settings.get("MONGO_DB")
+            mongodb=crawler.settings.get("MONGO_DB"),
+            username=crawler.settings.get("MONGO_USER"),
+            password=crawler.settings.get("MONGO_PASSWORD")
         )
 
     def open_spider(self, spider):
@@ -37,6 +41,7 @@ class MongoDBPipeline(object):
         '''
         self.client = pymongo.MongoClient(self.mongourl, self.mongoport)
         self.db = self.client[self.mongodb]
+        self.db.authenticate(self.username, self.password)
 
     def process_item(self, item, spider):
         '''

@@ -9,6 +9,15 @@
 #     https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
 #     https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
+# 分布式
+# Enables scheduling storing requests queue in redis.
+SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+
+# Ensure all spiders share same duplicates filter through redis.
+DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+
+REDIS_URL = 'redis://root:newLife2016@8.129.178.143:6379'
+
 BOT_NAME = 'video_scrapy'
 
 SPIDER_MODULES = ['video_scrapy.spiders']
@@ -23,9 +32,9 @@ ROBOTSTXT_OBEY = False
 
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # REACTOR_THREADPOOL_MAXSIZE = 32
-CONCURRENT_REQUESTS = 32
-# CONCURRENT_REQUESTS_PER_DOMAIN = 32
-# CONCURRENT_REQUESTS_PER_IP = 0
+CONCURRENT_REQUESTS = 256
+CONCURRENT_REQUESTS_PER_DOMAIN = 64
+CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
 # DOWNLOAD_DELAY = 0
 # RANDOMIZE_DOWNLOAD_DELAY = True
@@ -70,7 +79,7 @@ DOWNLOADER_MIDDLEWARES = {
     'video_scrapy.middlewares.RandomUserAgent': 541,
     'video_scrapy.middlewares.ProxyMiddleWares': 542,
     'scrapy.downloadermiddlewares.retry.RetryMiddleware': None,
-     'video_scrapy.middlewares.MyRetry': 543,
+    'video_scrapy.middlewares.MyRetry': 543,
     'video_scrapy.middlewares.VideoScrapyDownloaderMiddleware': 544,
 }
 DOWNLOAD_HANDLERS = {
@@ -86,12 +95,13 @@ DOWNLOAD_HANDLERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
-MONGO_URL = '127.0.0.1'
+MONGO_URL = '8.129.178.143'
 MONGO_PORT = 27017
 MONGO_DB = 'movie_system'
 
 ITEM_PIPELINES = {
     'video_scrapy.pipelines.MongoDBPipeline': 300,
+    #  'scrapy_redis.pipelines.RedisPipeline': 301
 }
 USER_AGENTS = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",
