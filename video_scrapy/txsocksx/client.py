@@ -8,7 +8,7 @@
 
 import socket
 import struct
-
+import logging
 from parsley import stack
 from twisted.internet import protocol, defer, interfaces
 from zope.interface import implementer

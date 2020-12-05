@@ -2,9 +2,7 @@
 # See COPYING for details.
 
 """``twisted.web.client`` adapters for SOCKS4/4a and SOCKS5 connections.
-
 This requires Twisted 12.1 or greater to use.
-
 """
 
 
@@ -74,39 +72,29 @@ class _SOCKSAgent(Agent):
 
 class SOCKS4Agent(_SOCKSAgent):
     """An `Agent`__ which connects over SOCKS4.
-
     See |SOCKS5Agent| for details.
-
     __ http://twistedmatrix.com/documents/current/api/twisted.web.client.Agent.html
     .. |SOCKS5Agent| replace:: ``SOCKS5Agent``
-
     """
 
     endpointFactory = SOCKS4ClientEndpoint
 
 class SOCKS5Agent(_SOCKSAgent):
     """An ``Agent`` which connects over SOCKS5.
-
     :param proxyEndpoint: The same as *proxyEndpoint* for
         |SOCKS5ClientEndpoint|: the endpoint of the SOCKS5 proxy server. This
         argument must be passed as a keyword argument.
     :param endpointArgs: A dict of keyword arguments which will be passed when
         constructing the |SOCKS5ClientEndpoint|. For example, this could be
         ``{'methods': {'anonymous': ()}}``.
-
     The rest of the parameters, methods, and overall behavior is identical to
     `Agent`__. The ``connectTimeout`` and ``bindAddress`` arguments will be
     ignored and should be specified when constructing the *proxyEndpoint*.
-
     __ http://twistedmatrix.com/documents/current/api/twisted.web.client.Agent.html
-
     If used with Twisted 15.0 or greater, this class will also implement
     `IAgentEndpointFactory`__.
-
     __ http://twistedmatrix.com/documents/current/api/twisted.web.iweb.IAgentEndpointFactory.html
-
     .. |SOCKS5ClientEndpoint| replace:: ``SOCKS5ClientEndpoint``
-
     """
 
     endpointFactory = SOCKS5ClientEndpoint

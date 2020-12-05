@@ -9,11 +9,13 @@ from scrapy import signals
 from video_scrapy.settings import USER_AGENTS
 import random
 import string
+import time
 import requests
+from twisted.web.client import Agent
 from scrapy.core.downloader.tls import openssl_methods
 from scrapy.utils.misc import create_instance, load_object
 from scrapy.downloadermiddlewares.retry import RetryMiddleware
-from scrapy.settings.default_settings import  DOWNLOADER_CLIENTCONTEXTFACTORY,DOWNLOADER_CLIENT_TLS_METHOD
+from scrapy.settings.default_settings import DOWNLOADER_CLIENTCONTEXTFACTORY, DOWNLOADER_CLIENT_TLS_METHOD
 from scrapy.settings import default_settings as settings
 import logging
 import scrapy.core.downloader.handlers.http11 as handler
@@ -21,6 +23,11 @@ from twisted.internet import reactor
 from txsocksx.http import SOCKS5Agent
 from twisted.internet.endpoints import TCP4ClientEndpoint
 from scrapy.core.downloader.webclient import _parse
+from scrapy.spidermiddlewares.httperror import HttpErrorMiddleware
+from scrapy.exceptions import IgnoreRequest
+
+logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
+
 
 class VideoScrapySpiderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -69,21 +76,41 @@ class VideoScrapySpiderMiddleware(object):
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
 
+
 class RandomUserAgent(object):
     """
     换User-Agent
     """
+
     def process_request(self, request, spider):
         request.headers['User-Agent'] = random.choice(USER_AGENTS)
+
+# class ForbiddenMiddleware(HttpErrorMiddleware):
+#     """
+#     处理403
+#     """
+#     def process_spider_exception(self, response, exception, spider):
+#         if isinstance(exception, HttpError):
+#             spider.crawler.stats.inc_value('httperror/response_ignored_count')
+#             spider.crawler.stats.inc_value(
+#                 f'httperror/response_ignored_status_count/{response.status}'
+#             )
+#             logger.info(
+#                 "Ignoring response %(response)r: HTTP status code is not handled or not allowed",
+#                 {'response': response}, extra={'spider': spider},
+#             )
+#             return []
+
 
 class MyRetry(RetryMiddleware):
     """
     保存重试失败url
     """
+
     def process_exception(self, request, exception, spider):
-        logging.debug("重试process_exception%s" % (request.meta['proxy'][9:]))
-        self.delete_proxy(request.meta['proxy'][9:])
-        logging.debug("删除代理" + request.meta['proxy'])
+        if 'proxy' in request.meta:
+            self.delete_proxy(request.meta['proxy'][9:])
+            logging.debug("重试删除代理" + request.meta['proxy'])
         if (
             isinstance(exception, self.EXCEPTIONS_TO_RETRY)
             and not request.meta.get('dont_retry', False)
@@ -92,6 +119,7 @@ class MyRetry(RetryMiddleware):
 
     def delete_proxy(self, proxy):
         requests.get("http://127.0.0.1:5010/delete/?proxy={}".format(proxy))
+
 
 class VideoScrapyDownloaderMiddleware(object):
     # Not all methods need to be defined. If a method is not defined,
@@ -109,64 +137,94 @@ class VideoScrapyDownloaderMiddleware(object):
         # Called for each request that goes through the downloader
         # middleware.
         # Must either:
+        if request.url.startswith("https://www.douban.com/accounts/login") or request.url.startswith("https://accounts.douban.com"):
+            self.delete_proxy(request.meta['proxy'][9:])
+            logging.debug("被封，跳转登陆，删除代理" + request.meta['proxy'])
+            raise IgnoreRequest("需要重新登录，删除代理")
         # - return None: continue processing this request
         # - or return a Response object
         # - or return a Request object
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
         return None
-    
+
     def process_response(self, request, response, spider):
         # Called with the response returned from the downloader.
         # Must either;
+        if response.status == 403:
+            self.delete_proxy(request.meta['proxy'][9:])
+            logging.debug("403删除代理" + request.meta['proxy'])
+            raise IgnoreRequest("403 forbidden")
         # - return a Response object
         # - return a Request object
         # - or raise IgnoreRequest
         return response
 
+    def delete_proxy(self, proxy):
+        requests.get("http://127.0.0.1:5010/delete/?proxy={}".format(proxy))
+
     def process_exception(self, request, exception, spider):
         # Called when a download handler or a process_request()
         # (from other downloader middleware) raises an exception.
+        logging.debug(exception)
         # Must either:
         # - return None: continue processing this exception
         # - return a Response object: stops process_exception() chain
         # - return a Request object: stops process_exception() chain
         pass
-    
+
     def spider_opened(self, spider):
         spider.logger.info('Spider opened: %s' % spider.name)
 
-    
-
 
 class TorScrapyAgent(handler.ScrapyAgent):
-    _Agent = SOCKS5Agent
-
     def _get_agent(self, request, timeout):
-        proxy = request.meta['proxy']
+        bindaddress = request.meta.get('bindaddress') or self._bindAddress
+        proxy = request.meta.get('proxy')
         if proxy:
-            proxy_scheme, _, proxy_host, proxy_port, _ = _parse(proxy)
-            proxy_scheme = str(proxy_scheme, 'utf-8')
-            if proxy_scheme == 'socks5':
-                endpoint = TCP4ClientEndpoint(reactor, proxy_host, proxy_port)
-                self._sslMethod = openssl_methods[DOWNLOADER_CLIENT_TLS_METHOD]
-                self._contextFactoryClass = load_object(DOWNLOADER_CLIENTCONTEXTFACTORY)
-                self._contextFactory = create_instance(
-                    objcls=self._contextFactoryClass,
-                    settings=settings,
-                    crawler=None,
-                    method=self._sslMethod,
-                )
-                return self._Agent(reactor, proxyEndpoint=endpoint, contextFactory = self._contextFactory)
+            _, _, proxyHost, proxyPort, proxyParams = _parse(proxy)
+            scheme = _parse(request.url)[0]
+            omitConnectTunnel = b'noconnect' in proxyParams
+            if scheme == 'https' and not omitConnectTunnel:
+                proxyConf = (proxyHost, proxyPort,
+                             request.headers.get('Proxy-Authorization', None))
+                return self._TunnelingAgent(reactor, proxyConf,
+                                            contextFactory=self._contextFactory, connectTimeout=timeout,
+                                            bindAddress=bindaddress, pool=self._pool)
+            else:
+                proxyEndpoint = TCP4ClientEndpoint(reactor, proxyHost, proxyPort,
+                                                   timeout=timeout, bindAddress=bindaddress)
+                agent = SOCKS5Agent(reactor, proxyEndpoint=proxyEndpoint,
+                                    contextFactory=self._contextFactory, pool=self._pool, bindAddress=bindaddress, connectTimeout=timeout)
+                return agent
 
-        return super(TorScrapyAgent, self)._get_agent(request, timeout)
+        return self._Agent(reactor, contextFactory=self._contextFactory,
+                           connectTimeout=timeout, bindAddress=bindaddress, pool=self._pool)
+
 
 class ProxyMiddleWares(object):
+    @classmethod
+    def from_crawler(cls, crawler):
+        # This method is used by Scrapy to create your spiders.
+        s = cls()
+        crawler.signals.connect(s.spider_opened, signal=signals.spider_opened)
+        return s
+
+    def spider_opened(self, spider):
+        spider.logger.info('Spider opened: %s' % spider.name)
+
     def process_request(self, request, spider):
         # Called for each request that goes through the downloader
         # middleware.
-        proxy = self.get_proxy().get("proxy")
-        request.meta['proxy'] = "socks5://" + proxy
+        while True:
+            proxy = self.get_proxy().get("proxy")
+            if proxy == None:
+                # 如果没有代理休眠5s
+                time.sleep(5)
+                continue
+                # spider.crawler.engine.close_spider(spider, "代理不足，关闭爬虫")
+            request.meta['proxy'] = "socks5://" + proxy
+            break
         request.cookie = self.getCookie()
         # Must either:
         # - return None: continue processing this request
@@ -175,6 +233,7 @@ class ProxyMiddleWares(object):
         # - or raise IgnoreRequest: process_exception() methods of
         #   installed downloader middleware will be called
         return None
+
     def getCookie(self):
         bid = ''.join(
             random.choice(string.ascii_letters + string.digits)
@@ -185,13 +244,17 @@ class ProxyMiddleWares(object):
             'handle_httpstatus_list': [302],
         }
         return cookies
+
     def get_proxy(self):
         return requests.get("http://127.0.0.1:5010/get/").json()
+
 
 class TorHTTPDownloadHandler(handler.HTTP11DownloadHandler):
     def download_request(self, request, spider):
         agent = TorScrapyAgent(contextFactory=self._contextFactory, pool=self._pool,
-                               maxsize=getattr(spider, 'download_maxsize', self._default_maxsize),
-                               warnsize=getattr(spider, 'download_warnsize', self._default_warnsize))
-
+                               maxsize=getattr(
+                                   spider, 'download_maxsize', self._default_maxsize),
+                               warnsize=getattr(
+                                   spider, 'download_warnsize', self._default_warnsize),
+                               fail_on_dataloss=self._fail_on_dataloss)
         return agent.download_request(request)

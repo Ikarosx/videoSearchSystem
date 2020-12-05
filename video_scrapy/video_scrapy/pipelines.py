@@ -6,6 +6,7 @@
 # See: https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 import pymongo
 import logging
+from scrapy.exceptions import DropItem
 class VideoScrapyPipeline(object):
     def process_item(self, item, spider):
         return item
@@ -41,8 +42,18 @@ class MongoDBPipeline(object):
         '''
         1、将数据写入数据库
         '''
-        self.db['movie'].insert(dict(item))
-        logging.debug('Item written to MongoDB database %s/%s：%s' % (self.db, 'movie', item['title']))
+        data = self.db['movie'].find_one({"id": item['id']})
+        # 数据库存在且已经有投票人数，说明已经爬取
+        if data and 'votePeopleNum' in data:
+            raise DropItem("数据库存在%s" % (item['id']))
+        if not data:
+            # 不存在插入
+            logging.debug('插入数据%s' % (item['title']))
+            self.db['movie'].insert(dict(item))
+        else:
+            # 存在更新
+            logging.debug('更新数据%s' % (item['title']))
+            self.db['movie'].update_one({"id": item['id']}, {"$set":dict(item)})
         return item  
          
     def close_spider(self, spider):

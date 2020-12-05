@@ -46,3 +46,11 @@ class MovieItem(Item):
     language = Field()
     # 演员
     actors = Field()
+    # 集数
+    episode = Field()
+    # 集数
+    watchEP = Field()
+    # 集数
+    watchMovie = Field()
+    # 官方网站
+    site = Field()
