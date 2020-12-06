@@ -35,18 +35,16 @@ class MovieSpiderSpider(Spider):
                  '恐怖',
                  '文艺']
     tvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片']
-    
+    client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % ('Ikarosx', 'newLife2016', '127.0.0.1', '27017', 'movie_system'))
+    db = client['movie_system']
     # 最新爬虫方案：
     # ①找出所有url
     # ②判断数据库中该id是否有评论人数，如果没有跳3，如果有跳4，
     # ③解析该id对应链接的数据到数据库
     # ④递归 "喜欢这部电影的人也喜欢" 
     def start_requests(self):
-        self.client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % ('Ikarosx', 'newLife2016', '127.0.0.1', '27017', 'movie_system'))
-        self.db = self.client['movie_system']
         for item in self.db['movie'].find({"votePeopleNum": {"$exists": False}}):
             yield Request(url=item['url'], callback=self.parse_movie_detail)
-        self.client.close()
     # 通过更多链接
     # def start_requests(self):
     #     # yield Request(url=self.startUrl, callback=self.parse_url)
@@ -159,7 +157,12 @@ class MovieSpiderSpider(Spider):
         item['url'] = response.url.split('?')[0]
         item['id'] = re.match(re.compile(
             r".*subject/(\d+)/"), item['url']).group(1)
-        
+        data = self.db['movie'].find_one({"id": item['id']})
+        # 数据库存在且已经有投票人数，说明已经爬取
+        if data and 'votePeopleNum' in data:
+            # 数据库存在进行下一条
+            logging.debug("数据库存在%s" % (item['id']))
+            return
         # if not info:
         #     logging.debug("无法读取到info数据")
         #     yield item

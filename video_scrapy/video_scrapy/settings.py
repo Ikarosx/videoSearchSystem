@@ -11,12 +11,12 @@
 
 # 分布式
 # Enables scheduling storing requests queue in redis.
-SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+# SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 
 # Ensure all spiders share same duplicates filter through redis.
-DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+# DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 
-REDIS_URL = 'redis://root:newLife2016@8.129.178.143:6379'
+REDIS_URL = 'redis://default:newLife2016@8.129.178.143:6379'
 
 BOT_NAME = 'video_scrapy'
 
@@ -31,10 +31,10 @@ RETRY_TIMES = 15
 ROBOTSTXT_OBEY = False
 # LOG_LEVEL = 'WARNING'
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
-# REACTOR_THREADPOOL_MAXSIZE = 32
-CONCURRENT_REQUESTS = 256
-# CONCURRENT_REQUESTS_PER_DOMAIN = 64
-# CONCURRENT_REQUESTS_PER_IP = 0
+# REACTOR_THREADPOOL_MAXSIZE = 128
+CONCURRENT_REQUESTS = 128
+# CONCURRENT_REQUESTS_PER_DOMAIN = 100000
+CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
 # DOWNLOAD_DELAY = 0
 # RANDOMIZE_DOWNLOAD_DELAY = True
@@ -70,7 +70,7 @@ SPIDER_MIDDLEWARES = {
 
 
 }
-DEPTH_LIMIT = 20
+# DEPTH_LIMIT = 20
 # LOG_ENABLED = False
 HTTPERROR_ALLOWED_CODES = [403]
 # Enable or disable downloader middlewares
