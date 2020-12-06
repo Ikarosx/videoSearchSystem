@@ -42,7 +42,7 @@ class MovieSpiderSpider(Spider):
     # ③解析该id对应链接的数据到数据库
     # ④递归 "喜欢这部电影的人也喜欢" 
     def start_requests(self):
-        for item in self.db['movie'].find({}):
+        for item in self.db['movie'].find({"votePeopleNum": {"$exists": False}}):
             yield Request(url=item['url'], callback=self.parse_movie_detail)
 
     # 通过更多链接

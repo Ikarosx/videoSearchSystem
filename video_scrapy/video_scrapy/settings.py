@@ -29,10 +29,10 @@ RETRY_TIMES = 15
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = False
-LOG_LEVEL = 'WARNING'
+# LOG_LEVEL = 'WARNING'
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # REACTOR_THREADPOOL_MAXSIZE = 32
-CONCURRENT_REQUESTS = 1024
+CONCURRENT_REQUESTS = 256
 # CONCURRENT_REQUESTS_PER_DOMAIN = 64
 # CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
@@ -95,7 +95,7 @@ DOWNLOAD_HANDLERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
-MONGO_URL = '8.129.178.143'
+MONGO_URL = '127.0.0.1'
 MONGO_PORT = 27017
 MONGO_DB = 'movie_system'
 MONGO_USER = 'Ikarosx'
