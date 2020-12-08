@@ -11,10 +11,10 @@
 
 # 分布式
 # Enables scheduling storing requests queue in redis.
-# SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+SCHEDULER = "scrapy_redis.scheduler.Scheduler"
 
 # Ensure all spiders share same duplicates filter through redis.
-# DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
 
 REDIS_URL = 'redis://default:newLife2016@8.129.178.143:6379'
 
@@ -23,7 +23,7 @@ BOT_NAME = 'video_scrapy'
 SPIDER_MODULES = ['video_scrapy.spiders']
 NEWSPIDER_MODULE = 'video_scrapy.spiders'
 RETRY_TIMES = 15
-
+SCHEDULER_PERSIST = True
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'video_scrapy (+http://www.yourdomain.com)'
 
@@ -32,9 +32,9 @@ ROBOTSTXT_OBEY = False
 # LOG_LEVEL = 'WARNING'
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # REACTOR_THREADPOOL_MAXSIZE = 128
-CONCURRENT_REQUESTS = 128
+CONCURRENT_REQUESTS = 256
 # CONCURRENT_REQUESTS_PER_DOMAIN = 100000
-CONCURRENT_REQUESTS_PER_IP = 0
+# CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
 # DOWNLOAD_DELAY = 0
 # RANDOMIZE_DOWNLOAD_DELAY = True
@@ -95,10 +95,10 @@ DOWNLOAD_HANDLERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
-MONGO_URL = '127.0.0.1'
+MONGO_URL = '8.129.178.143'
 MONGO_PORT = 27017
 MONGO_DB = 'movie_system'
-MONGO_USER = 'Ikarosx'
+MONGO_USER = 'movie'
 MONGO_PASSWORD = 'newLife2016'
 ITEM_PIPELINES = {
     'video_scrapy.pipelines.MongoDBPipeline': 300,

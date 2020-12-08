@@ -21,10 +21,14 @@ class MovieItem(Item):
     id = Field()
     # 评论人数
     votePeopleNum = Field()
+    # 发布年份
+    releaseYear = Field()
     # 上映日期
     releaseDate = Field()
-    # 片长，单位分钟
+    # 片长
     runtime = Field()
+    # 片长单位
+    runtimeUnit = Field()
     # 语言
     language = Field()
     # imdbId
@@ -48,9 +52,9 @@ class MovieItem(Item):
     actors = Field()
     # 集数
     episode = Field()
-    # 集数
+    # 观看剧集地址
     watchEP = Field()
-    # 集数
+    # 观看电影的地址
     watchMovie = Field()
     # 官方网站
     site = Field()

@@ -46,10 +46,24 @@ class MongoDBPipeline(object):
         self.db = self.client[self.mongodb]
         # self.db.authenticate(self.username, self.password)
 
+    def convertTypeItem(self, item):
+        # 需要转成int的字段
+        ints = ['id', 'votePeopleNum', 'releaseYear', 'runtime', 'episode']
+        # 需要转成float的字段
+        floats = ['rate']
+        for intStr in ints:
+            if intStr in item:
+                item[intStr] = int(item[intStr])
+        for floatStr in floats:
+            if floatStr in item:
+                item[floatStr] = float(item[floatStr])
+
+
     def process_item(self, item, spider):
-        '''
-        1、将数据写入数据库
-        '''
+        # 去掉为空的
+        item = dict(filter(lambda x: x[1]!='' and x[1]!= None, item.items()))
+        # 类型转换，转成int和float
+        self.convertTypeItem(item)
         data = self.db['movie'].find_one({"id": item['id']})
         # 数据库存在且已经有投票人数，说明已经爬取
         if data and 'votePeopleNum' in data:

@@ -10,6 +10,7 @@ from video_scrapy.settings import USER_AGENTS
 import random
 import string
 import time
+import urllib
 import requests
 from twisted.web.client import Agent
 from scrapy.core.downloader.tls import openssl_methods
@@ -139,8 +140,8 @@ class VideoScrapyDownloaderMiddleware(object):
         # Must either:
         if request.url.startswith("https://www.douban.com/accounts/login") or request.url.startswith("https://accounts.douban.com"):
             self.delete_proxy(request.meta['proxy'][9:])
-            logging.debug("被封，跳转登陆，删除代理" + request.meta['proxy'])
-            raise IgnoreRequest("需要重新登录，删除代理")
+            logging.debug("跳转登陆，删除代理" + request.meta['proxy'])
+            return request
         # - return None: continue processing this request
         # - or return a Response object
         # - or return a Request object
@@ -153,8 +154,20 @@ class VideoScrapyDownloaderMiddleware(object):
         # Must either;
         if response.status == 403:
             self.delete_proxy(request.meta['proxy'][9:])
-            logging.debug("403删除代理" + request.meta['proxy'])
-            raise IgnoreRequest("403 forbidden")
+            logging.debug("403删除代理，" + request.meta['proxy'])
+            if request.url.startswith('https://sec.douban.com/b?r='):
+                url = request.url
+                url = url.replace('https://sec.douban.com/b?r=','')
+                url = urllib.parse.unquote(url)
+                request._set_url(url)
+                logging.debug("新的url" + url)
+                return request
+            raise IgnoreRequest("未知403")
+            # 继续请求
+        if "检测到有异常请求" in response.text:
+            self.delete_proxy(request.meta['proxy'][9:])
+            logging.debug("检测到有异常请求从IP发出，请求："+request.url+"，删除代理，" + request.meta['proxy'])
+            return request
         # - return a Response object
         # - return a Request object
         # - or raise IgnoreRequest

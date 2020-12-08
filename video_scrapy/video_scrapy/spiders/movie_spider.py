@@ -12,50 +12,19 @@ import pymongo
 class MovieSpiderSpider(Spider):
     name = 'movie_spider'
     allowed_domains = ['movie.douban.com']
-    movieStart = 0
-    movieLimit = 100
-    # tvStart = 0
-    # tvLimit = 20
     startUrl = 'https://movie.douban.com/explore'
-    movieTags = ['热门',
-                 '最新',
-                 '经典',
-                 '可播放',
-                 '豆瓣高分',
-                 '冷门佳片',
-                 '华语',
-                 '欧美',
-                 '韩国',
-                 '日本',
-                 '动作',
-                 '喜剧',
-                 '爱情',
-                 '科幻',
-                 '悬疑',
-                 '恐怖',
-                 '文艺']
-    tvTags = ['热门', '美剧', '英剧', '韩剧', '日剧', '国产剧', '港剧', '日本动画', '综艺', '纪录片']
-    client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % ('Ikarosx', 'newLife2016', '127.0.0.1', '27017', 'movie_system'))
+    
+    client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' %
+                                 ('movie', 'newLife2016', '8.129.178.143', '27017', 'movie_system'))
     db = client['movie_system']
     # 最新爬虫方案：
     # ①找出所有url
     # ②判断数据库中该id是否有评论人数，如果没有跳3，如果有跳4，
     # ③解析该id对应链接的数据到数据库
-    # ④递归 "喜欢这部电影的人也喜欢" 
+    # ④递归 "喜欢这部电影的人也喜欢"
     def start_requests(self):
         for item in self.db['movie'].find({"votePeopleNum": {"$exists": False}}):
             yield Request(url=item['url'], callback=self.parse_movie_detail)
-    # 通过更多链接
-    # def start_requests(self):
-    #     # yield Request(url=self.startUrl, callback=self.parse_url)
-    #     for tag in self.movieTags:
-    #         movieUrl = 'https://movie.douban.com/j/search_subjects?type=movie&tag=%s&sort=recommend&page_limit=%s&page_start=0' % (
-    #             tag, self.movieLimit)
-    #         yield Request(url=movieUrl, callback=self.parse_movie_url)
-    #     for tag in self.tvTags:
-    #         movieUrl = 'https://movie.douban.com/j/search_subjects?type=tv&tag=%s&sort=recommend&page_limit=%s&page_start=0' % (
-    #             tag, self.movieLimit)
-    #         yield Request(url=movieUrl, callback=self.parse_movie_url)
 
     # 遍历整个页面a链接
     def parse_url(self, response):
@@ -93,56 +62,13 @@ class MovieSpiderSpider(Spider):
             return False
         return True
 
-    # 通过加载更多进入
-    def parse_movie_url(self, response):
-        # 加载成dict格式
-        data = json.loads(response.text)
-        # 获取subjects
-        subjects = data["subjects"]
-        # 遍历
-        for subject in subjects:
-            # 构建item
-            item = MovieItem()
-            item['title'] = subject['title']
-            item['cover'] = subject['cover']
-            item['rate'] = subject['rate']
-            item['url'] = subject['url']
-            item['id'] = subject['id']
-            count = self.db['movie'].count_documents({"id": item['id']})
-            # 数据库存在进行下一条
-            if count != 0:
-                logging.debug("数据库存在%s" % (item['id']))
-                continue
-            yield item
-        # if item['url']:
-        #     # 如果url有数据 进一步解析
-        #     yield Request(url=item['url'], callback=self.parse_movie_detail, meta={'item': item})
-        # else:
-        #     # 没有数据直接返回
-        #     yield item
-
-        # 已经最后一页了
-        if len(subjects) == self.movieLimit:
-            self.movieStart += self.movieLimit
-            # 更新pageStart
-            parseResult = urlparse.urlparse(response.url)
-            querys = urlparse.parse_qs(parseResult.query)
-            querys['page_start'] = [
-                str(int(querys['page_start'][0]) + self.movieLimit)]
-            querys = {k: v[0] for k, v in querys.items()}
-            querys = urllib.parse.urlencode(querys)
-            requestUrl = parseResult.scheme + "://" + \
-                parseResult.netloc + parseResult.path + "?" + querys
-            yield Request(url=requestUrl, callback=self.parse_movie_url)
-
     # 解析具体的页面
     # 最新爬虫方案：
     # ①找出所有url
     # ②判断数据库中该id是否有评论人数，如果没有跳3，如果有跳4，
     # ③解析该id对应链接的数据到数据库
-    # ④递归 "喜欢这部电影的人也喜欢" 
+    # ④递归 "喜欢这部电影的人也喜欢"
     def parse_movie_detail(self, response):
-
         info = response.css("#info").get()
         if not info:
             # 如果没有info
@@ -157,45 +83,45 @@ class MovieSpiderSpider(Spider):
         item['url'] = response.url.split('?')[0]
         item['id'] = re.match(re.compile(
             r".*subject/(\d+)/"), item['url']).group(1)
-        data = self.db['movie'].find_one({"id": item['id']})
+        data = self.db['movie'].find_one({"id": int(item['id'])})
         # 数据库存在且已经有投票人数，说明已经爬取
         if data and 'votePeopleNum' in data:
             # 数据库存在进行下一条
             logging.debug("数据库存在%s" % (item['id']))
             return
-        # if not info:
-        #     logging.debug("无法读取到info数据")
-        #     yield item
         # 评论人数
-        votePeopleNum = response.css(
+        item['votePeopleNum'] = response.css(
             ".rating_people span[property='v:votes']::text").get()
-        item['votePeopleNum'] = votePeopleNum
+        # 发布日期
+        releaseYear = response.css(".year::text").get()
+        if releaseYear:
+            item['releaseYear'] = releaseYear[1:-1]
         # 上映日期
         releaseDate = response.css(
             "#info span[property='v:initialReleaseDate']::text").get()
         if releaseDate:
             # 2020-11-27(韩国网络)
-            pattern = re.compile(r'(.*)\((.*)\)')
-            patternResult = re.match(pattern, releaseDate)
-            if patternResult:
-                # 2020-11-27
-                releaseDate = patternResult.group(1)
-            item['releaseDate'] = releaseDate
+            item['releaseDate'] = releaseDate.split('/')
         # 片长，单位分钟
         runtime = response.css(
             "#info span[property='v:runtime']::text").get()
         if runtime:
-            runtime = runtime[:-2]
-            runtimeMatchResult = re.match(re.compile(r'(\d+).*'), runtime)
+            runtime = runtime.strip()
+            runtimeMatchResult = re.match(re.compile(r'(\d+)(.*)'), runtime)
             if runtimeMatchResult:
                 runtime = runtimeMatchResult.group(1)
-        item['runtime'] = runtime
+                item['runtime'] = runtime
+                runtimeUnit = runtimeMatchResult.group(2)
+                item['runtimeUnit'] = runtimeUnit
         # 官方网站
-        site = response.xpath("//span[contains(text(),'官方网站')]/following-sibling::a[1]//@href").get()
+        site = response.xpath(
+            "//span[contains(text(),'官方网站')]/following-sibling::a[1]//@href").get()
         item['site'] = site
         # IMDb
-        imdbId = response.xpath("//span[contains(text(),'IMDb')]/following-sibling::a[1]//text()").get()
-        imdbUrl = response.xpath("//span[contains(text(),'IMDb')]/following-sibling::a[1]//@href").get()
+        imdbId = response.xpath(
+            "//span[contains(text(),'IMDb')]/following-sibling::a[1]//text()").get()
+        imdbUrl = response.xpath(
+            "//span[contains(text(),'IMDb')]/following-sibling::a[1]//@href").get()
         item['imdbId'] = imdbId
         item['imdbUrl'] = imdbUrl
         # 标签
@@ -220,7 +146,7 @@ class MovieSpiderSpider(Spider):
         episode = re.search(re.compile(
             '集数.*?</span>(.*?)<br>'), info)
         if episode:
-            item['episode'] = episode.group().strip()
+            item['episode'] = episode.group(1).strip()
         # 又名
         aliasPatternResult = re.search(
             re.compile('又名.*?</span>(.*?)<br>'), info)
@@ -245,14 +171,14 @@ class MovieSpiderSpider(Spider):
             for aa in aas:
                 dataSource = aa.attrib['data-source']
                 dataCn = aa.attrib['data-cn']
-                
+
                 data = {
                     "dataCn": dataCn
                 }
                 result = re.search(re.compile(
                     r"sources\["+dataSource+r"\].*?\[.*?\]", re.S), response.text)
                 if not result:
-                    logging.debug("视频获取不到对应的观看地址数据源" + response.url)
+                    logging.warn("视频获取不到对应的观看地址数据源" + response.url)
                     watchEP.append(data)
                     continue
                 result = result.group()
@@ -298,7 +224,7 @@ class MovieSpiderSpider(Spider):
                         r"sources\["+sourceMap[dataCn]+r"\].*?\[.*?\]", re.S), response.text)
                     # 获取不到对应的数据源
                     if not result:
-                        logging.debug("视频获取不到对应的观看地址数据源" + response.url)
+                        logging.warn("视频获取不到对应的观看地址数据源" + response.url)
                         watchMovie.append(data)
                         continue
                     result = result.group()
@@ -317,26 +243,39 @@ class MovieSpiderSpider(Spider):
                         movieArray.append({"ep": movieNum, "url": playLink})
                     data['source'] = movieArray
                 else:
-                    searchResult = re.search(re.compile(r"link2/\?url=(.*)", re.S), href)
+                    searchResult = re.search(re.compile(
+                        r"link2/\?url=(.*)", re.S), href)
                     if searchResult:
                         href = searchResult.group(1)
                         href = urllib.parse.unquote(href)
                     data['url'] = href
                 watchMovie.append(data)
             item['watchMovie'] = watchMovie
-        yield item
+        # 解析演员表
+        yield Request(url=urllib.parse.urljoin(item['url'],"celebrities"), callback=self.parse_movie_celebrities, meta={"item":item})
         # 遍历推荐
-        recommendations = response.css("#recommendations a::attr(href)").getall()
-        for recommenddation in recommendations:
-            yield Request(url=recommenddation, callback=self.parse_movie_detail)
+        recommendations = response.css(
+            "#recommendations a::attr(href)").getall()
+        for recommendation in recommendations:
+            # ----------  很快就过滤没了   -------
+            # recommendId = re.search(re.compile("subject/(\d+?)/"), recommendation).group(1)
+            # data = self.db['movie'].find_one({"id": recommendId})
+            # # 数据库存在且已经有投票人数，说明已经爬取
+            # if data and 'votePeopleNum' in data:
+            #     # 数据库存在进行下一条
+            #     logging.debug("数据库存在%s" % (recommendId))
+            #     continue
+            yield Request(url=recommendation, callback=self.parse_movie_detail)
 
+    
     # 解析演员饰演角色
     def parse_movie_celebrities(self, response):
         item = response.meta['item']
-        names = response.css(
-            ".list-wrapper:nth-child(2) .celebrity .name a::text").getall()
-        roles = response.css(
-            ".list-wrapper:nth-child(2) .celebrity .role::text").getall()
+        listWrapper = response.xpath("//div[@class='list-wrapper' and contains(h2/text(), '演员')]")
+        names = listWrapper.css(
+            ".celebrity .name a::text").getall()
+        roles = listWrapper.css(
+            ".celebrity .role::text").getall()
         nameRole = [{names[index].replace(
             '.', '-'):roles[index].replace('.', '-')} for index in range(len(names))]
         item['actors'] = nameRole
