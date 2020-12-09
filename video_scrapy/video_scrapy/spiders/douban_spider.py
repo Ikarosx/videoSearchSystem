@@ -9,11 +9,11 @@ import urllib
 import pymongo
 
 
-class MovieSpiderSpider(Spider):
-    name = 'movie_spider'
+class DoubanSpiderSpider(Spider):
+    name = 'douban_spider'
     allowed_domains = ['movie.douban.com']
     startUrl = 'https://movie.douban.com/explore'
-    
+
     client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' %
                                  ('movie', 'newLife2016', '8.129.178.143', '27017', 'movie_system'))
     db = client['movie_system']
@@ -22,6 +22,7 @@ class MovieSpiderSpider(Spider):
     # ②判断数据库中该id是否有评论人数，如果没有跳3，如果有跳4，
     # ③解析该id对应链接的数据到数据库
     # ④递归 "喜欢这部电影的人也喜欢"
+
     def start_requests(self):
         for item in self.db['movie'].find({"votePeopleNum": {"$exists": False}}):
             yield Request(url=item['url'], callback=self.parse_movie_detail)
@@ -90,12 +91,17 @@ class MovieSpiderSpider(Spider):
             logging.debug("数据库存在%s" % (item['id']))
             return
         # 评论人数
-        item['votePeopleNum'] = response.css(
+        votePeopleNum = response.css(
             ".rating_people span[property='v:votes']::text").get()
+        if votePeopleNum == None or votePeopleNum.strip() == '':
+            votePeopleNum = 0
+        item['votePeopleNum'] = votePeopleNum
         # 发布日期
         releaseYear = response.css(".year::text").get()
         if releaseYear:
-            item['releaseYear'] = releaseYear[1:-1]
+            releaseYear = re.search(re.compile(r'.*?(\d+).*?'), releaseYear)
+            if releaseYear:
+                item['releaseYear'] = releaseYear.group(1)
         # 上映日期
         releaseDate = response.css(
             "#info span[property='v:initialReleaseDate']::text").get()
@@ -144,7 +150,7 @@ class MovieSpiderSpider(Spider):
         item['types'] = types
         # 集数
         episode = re.search(re.compile(
-            '集数.*?</span>(.*?)<br>'), info)
+            '集数.*?</span>(\d+).*?<br>'), info)
         if episode:
             item['episode'] = episode.group(1).strip()
         # 又名
@@ -178,6 +184,7 @@ class MovieSpiderSpider(Spider):
                 result = re.search(re.compile(
                     r"sources\["+dataSource+r"\].*?\[.*?\]", re.S), response.text)
                 if not result:
+                    # 如果只有一个数据源，对应的数据源放在了一个js文件里
                     logging.warn("视频获取不到对应的观看地址数据源" + response.url)
                     watchEP.append(data)
                     continue
@@ -224,6 +231,7 @@ class MovieSpiderSpider(Spider):
                         r"sources\["+sourceMap[dataCn]+r"\].*?\[.*?\]", re.S), response.text)
                     # 获取不到对应的数据源
                     if not result:
+                        # 如果只有一个数据源，对应的数据源放在了一个js文件里
                         logging.warn("视频获取不到对应的观看地址数据源" + response.url)
                         watchMovie.append(data)
                         continue
@@ -251,8 +259,9 @@ class MovieSpiderSpider(Spider):
                     data['url'] = href
                 watchMovie.append(data)
             item['watchMovie'] = watchMovie
+        yield item
         # 解析演员表
-        yield Request(url=urllib.parse.urljoin(item['url'],"celebrities"), callback=self.parse_movie_celebrities, meta={"item":item})
+        # yield Request(url=urllib.parse.urljoin(item['url'], "celebrities"), callback=self.parse_movie_celebrities, meta={"item": item})
         # 遍历推荐
         recommendations = response.css(
             "#recommendations a::attr(href)").getall()
@@ -267,11 +276,11 @@ class MovieSpiderSpider(Spider):
             #     continue
             yield Request(url=recommendation, callback=self.parse_movie_detail)
 
-    
     # 解析演员饰演角色
     def parse_movie_celebrities(self, response):
         item = response.meta['item']
-        listWrapper = response.xpath("//div[@class='list-wrapper' and contains(h2/text(), '演员')]")
+        listWrapper = response.xpath(
+            "//div[@class='list-wrapper' and contains(h2/text(), '演员')]")
         names = listWrapper.css(
             ".celebrity .name a::text").getall()
         roles = listWrapper.css(

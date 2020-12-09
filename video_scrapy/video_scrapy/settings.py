@@ -32,9 +32,9 @@ ROBOTSTXT_OBEY = False
 # LOG_LEVEL = 'WARNING'
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # REACTOR_THREADPOOL_MAXSIZE = 128
-CONCURRENT_REQUESTS = 256
-# CONCURRENT_REQUESTS_PER_DOMAIN = 100000
-# CONCURRENT_REQUESTS_PER_IP = 0
+CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS_PER_DOMAIN = 100000
+CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
 # DOWNLOAD_DELAY = 0
 # RANDOMIZE_DOWNLOAD_DELAY = True
@@ -102,6 +102,7 @@ MONGO_USER = 'movie'
 MONGO_PASSWORD = 'newLife2016'
 ITEM_PIPELINES = {
     'video_scrapy.pipelines.MongoDBPipeline': 300,
+    'video_scrapy.pipelines.DoubanCelebrityItemMongoDBPipeline':301
     #  'scrapy_redis.pipelines.RedisPipeline': 301
 }
 USER_AGENTS = [

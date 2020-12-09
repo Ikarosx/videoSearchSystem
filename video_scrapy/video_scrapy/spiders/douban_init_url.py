@@ -8,8 +8,8 @@ import logging
 import urllib.parse as urlparse
 import urllib
 
-class InitUrlStageOneSpider(scrapy.Spider):
-    name = 'init_url_stage_one'
+class DoubanInitUrlSpider(scrapy.Spider):
+    name = 'douban_init_url'
     allowed_domains = ['douban.com']
     start_urls = ['http://douban.com/']
     movieLimit = 100

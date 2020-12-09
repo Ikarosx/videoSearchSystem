@@ -7,11 +7,12 @@
 import pymongo
 import logging
 from scrapy.exceptions import DropItem
-
+from scrapy.items import MovieItem, DoubanCelebrityItem, BangumiItem
 
 class VideoScrapyPipeline(object):
     def process_item(self, item, spider):
         return item
+
 
 
 class MongoDBPipeline(object):
@@ -60,14 +61,13 @@ class MongoDBPipeline(object):
 
 
     def process_item(self, item, spider):
+        if not isinstance(item, MovieItem): 
+            return
         # 去掉为空的
         item = dict(filter(lambda x: x[1]!='' and x[1]!= None, item.items()))
         # 类型转换，转成int和float
         self.convertTypeItem(item)
         data = self.db['movie'].find_one({"id": item['id']})
-        # 数据库存在且已经有投票人数，说明已经爬取
-        if data and 'votePeopleNum' in data:
-            raise DropItem("数据库存在%s" % (item['id']))
         if not data:
             # 不存在插入
             logging.debug('插入数据%s' % (item['title']))
@@ -76,6 +76,74 @@ class MongoDBPipeline(object):
             # 存在更新
             logging.debug('更新数据%s' % (item['title']))
             self.db['movie'].update_one(
+                {"id": item['id']}, {"$set": dict(item)})
+        return item
+
+    def close_spider(self, spider):
+        # 关闭数据库
+        self.client.close()
+
+class DoubanCelebrityItemMongoDBPipeline(object):
+    def __init__(self, mongourl, mongoport, mongodb, username, password):
+        '''
+        初始化mongodb数据的url、端口号、数据库名称
+        '''
+        self.mongourl = mongourl
+        self.mongoport = mongoport
+        self.mongodb = mongodb
+        self.username = username
+        self.password = password
+
+    @classmethod
+    def from_crawler(cls, crawler):
+        """
+        1、读取settings里面的mongodb数据的url、port、DB。
+        """
+        return cls(
+            mongourl=crawler.settings.get("MONGO_URL"),
+            mongoport=crawler.settings.get("MONGO_PORT"),
+            mongodb=crawler.settings.get("MONGO_DB"),
+            username=crawler.settings.get("MONGO_USER"),
+            password=crawler.settings.get("MONGO_PASSWORD")
+        )
+
+    def open_spider(self, spider):
+        '''
+        1、连接mongodb数据
+        '''
+        self.client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % (self.username, self.password, self.mongourl, self.mongoport, self.mongodb))
+        self.db = self.client[self.mongodb]
+        # self.db.authenticate(self.username, self.password)
+
+    def convertTypeItem(self, item):
+        # 需要转成int的字段
+        ints = ['id']
+        # 需要转成float的字段
+        floats = []
+        for intStr in ints:
+            if intStr in item:
+                item[intStr] = int(item[intStr])
+        for floatStr in floats:
+            if floatStr in item:
+                item[floatStr] = float(item[floatStr])
+
+
+    def process_item(self, item, spider):
+        if not isinstance(item, DoubanCelebrityItem): 
+            return
+        # 去掉为空的
+        item = dict(filter(lambda x: x[1]!='' and x[1]!= None, item.items()))
+        # 类型转换，转成int和float
+        self.convertTypeItem(item)
+        data = self.db.douban_celebrity.find_one({"id": item['id']})
+        if not data:
+            # 不存在插入
+            logging.debug('插入演员数据%s' % (item['name']))
+            self.db.douban_celebrity.insert(dict(item))
+        else:
+            # 存在更新
+            logging.debug('更新演员数据%s' % (item['name']))
+            self.db.douban_celebrity.update_one(
                 {"id": item['id']}, {"$set": dict(item)})
         return item
 

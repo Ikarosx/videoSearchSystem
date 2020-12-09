@@ -7,6 +7,15 @@
 
 from scrapy import Field,Item
 
+class BangumiItem(Item):
+    id = Field()
+    url = Field()
+
+class DoubanCelebrityItem(Item):
+    id = Field()
+    url = Field()
+    avatar = Field()
+    name = Field()
 
 class MovieItem(Item):
     # 标题
@@ -58,3 +67,5 @@ class MovieItem(Item):
     watchMovie = Field()
     # 官方网站
     site = Field()
+    # 磁力种子
+    magnent = Field()
