@@ -137,14 +137,14 @@ class DoubanSpiderSpider(Spider):
         rateOnWeight = response.css(
             ".ratings-on-weight .rating_per::text").getall()
         item['rateOnWeight'] = rateOnWeight
-        # 导演
-        director = response.xpath(
-            "//span[contains(span/text(),'导演')]//span[@class='attrs']//a//text()").getall()
-        item['director'] = director
-        # 编剧
-        scriptWriter = response.xpath(
-            "//span[contains(span/text(),'编剧')]//span[@class='attrs']//a//text()").getall()
-        item['scriptWriter'] = scriptWriter
+        # # 导演
+        # director = response.xpath(
+        #     "//span[contains(span/text(),'导演')]//span[@class='attrs']//a//text()").getall()
+        # item['director'] = director
+        # # 编剧
+        # scriptWriter = response.xpath(
+        #     "//span[contains(span/text(),'编剧')]//span[@class='attrs']//a//text()").getall()
+        # item['scriptWriter'] = scriptWriter
         # 类型
         types = response.css("#info span[property='v:genre']::text").getall()
         item['types'] = types

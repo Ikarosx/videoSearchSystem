@@ -23,7 +23,8 @@ BOT_NAME = 'video_scrapy'
 SPIDER_MODULES = ['video_scrapy.spiders']
 NEWSPIDER_MODULE = 'video_scrapy.spiders'
 RETRY_TIMES = 15
-SCHEDULER_PERSIST = True
+# SCHEDULER_PERSIST = True
+DUPEFILTER_DEBUG = True
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 #USER_AGENT = 'video_scrapy (+http://www.yourdomain.com)'
 
@@ -32,7 +33,7 @@ ROBOTSTXT_OBEY = False
 # LOG_LEVEL = 'WARNING'
 # Configure maximum concurrent requests performed by Scrapy (default: 16)
 # REACTOR_THREADPOOL_MAXSIZE = 128
-CONCURRENT_REQUESTS = 16
+CONCURRENT_REQUESTS = 32
 CONCURRENT_REQUESTS_PER_DOMAIN = 100000
 CONCURRENT_REQUESTS_PER_IP = 0
 DOWNLOAD_TIMEOUT = 30
@@ -95,15 +96,17 @@ DOWNLOAD_HANDLERS = {
 # Configure item pipelines
 # See https://doc.scrapy.org/en/latest/topics/item-pipeline.html
 
-MONGO_URL = '8.129.178.143'
+# MONGO_URL = '8.129.178.143'
+MONGO_URL = '127.0.0.1'
 MONGO_PORT = 27017
 MONGO_DB = 'movie_system'
 MONGO_USER = 'movie'
 MONGO_PASSWORD = 'newLife2016'
 ITEM_PIPELINES = {
     'video_scrapy.pipelines.MongoDBPipeline': 300,
-    'video_scrapy.pipelines.DoubanCelebrityItemMongoDBPipeline':301
-    #  'scrapy_redis.pipelines.RedisPipeline': 301
+    'video_scrapy.pipelines.DoubanCelebrityItemMongoDBPipeline': 301,
+    'video_scrapy.pipelines.BangumiItemMongoDBPipeline': 302,
+    'video_scrapy.pipelines.BangumiPersonItemMongoDBPipeline': 303
 }
 USER_AGENTS = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",

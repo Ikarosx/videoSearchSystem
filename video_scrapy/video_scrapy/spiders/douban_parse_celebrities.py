@@ -39,7 +39,8 @@ class DoubanParseCelebritiesSpider(scrapy.Spider):
             # 存储演员
             yield doubanCelebrityItem
             role = li.css(".role::text").get()
-            role = role.replace('.', '-')
+            if role:
+                role = role.replace('.', '-')
             actors.append({
                 "id": cid,
                 "name": name,
@@ -48,5 +49,4 @@ class DoubanParseCelebritiesSpider(scrapy.Spider):
         item = MovieItem()
         item['id'] = id
         item['actors'] = actors
-        logging.debug("更新演员表" + id)
         yield item

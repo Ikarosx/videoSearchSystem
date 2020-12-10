@@ -86,22 +86,6 @@ class RandomUserAgent(object):
     def process_request(self, request, spider):
         request.headers['User-Agent'] = random.choice(USER_AGENTS)
 
-# class ForbiddenMiddleware(HttpErrorMiddleware):
-#     """
-#     处理403
-#     """
-#     def process_spider_exception(self, response, exception, spider):
-#         if isinstance(exception, HttpError):
-#             spider.crawler.stats.inc_value('httperror/response_ignored_count')
-#             spider.crawler.stats.inc_value(
-#                 f'httperror/response_ignored_status_count/{response.status}'
-#             )
-#             logger.info(
-#                 "Ignoring response %(response)r: HTTP status code is not handled or not allowed",
-#                 {'response': response}, extra={'spider': spider},
-#             )
-#             return []
-
 
 class MyRetry(RetryMiddleware):
     """
@@ -110,7 +94,7 @@ class MyRetry(RetryMiddleware):
 
     def process_exception(self, request, exception, spider):
         if 'proxy' in request.meta:
-            self.delete_proxy(request.meta['proxy'][9:])
+            self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("重试删除代理" + request.meta['proxy'])
         if (
             isinstance(exception, self.EXCEPTIONS_TO_RETRY)
@@ -139,7 +123,7 @@ class VideoScrapyDownloaderMiddleware(object):
         # middleware.
         # Must either:
         if request.url.startswith("https://www.douban.com/accounts/login") or request.url.startswith("https://accounts.douban.com"):
-            self.delete_proxy(request.meta['proxy'][9:])
+            self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("跳转登陆，删除代理" + request.meta['proxy'])
             return request
         # - return None: continue processing this request
@@ -153,21 +137,22 @@ class VideoScrapyDownloaderMiddleware(object):
         # Called with the response returned from the downloader.
         # Must either;
         if response.status == 403:
-            self.delete_proxy(request.meta['proxy'][9:])
+            self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("403删除代理，" + request.meta['proxy'])
+            url = request.url
             if request.url.startswith('https://sec.douban.com/b?r='):
-                url = request.url
                 url = url.replace('https://sec.douban.com/b?r=','')
                 url = urllib.parse.unquote(url)
-                request._set_url(url)
-                logging.debug("新的url" + url)
-                return request
-            raise IgnoreRequest("未知403")
+            request._set_url(url)
+            logging.debug("新的url" + url)
+            # 关键，不然会由于请求一样被过滤掉
+            return request.replace(dont_filter=True)
+            # raise IgnoreRequest("未知403")
             # 继续请求
         if "检测到有异常请求" in response.text:
-            self.delete_proxy(request.meta['proxy'][9:])
+            self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("检测到有异常请求从IP发出，请求："+request.url+"，删除代理，" + request.meta['proxy'])
-            return request
+            return request.replace(dont_filter=True)
         # - return a Response object
         # - return a Request object
         # - or raise IgnoreRequest

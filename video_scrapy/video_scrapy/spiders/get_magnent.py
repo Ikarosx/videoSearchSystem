@@ -29,11 +29,13 @@ class GetMagnentSpider(scrapy.Spider):
         id = response.meta['id']
         trs = response.css(".table-torrents tr:not(:first-child)")
         magnents = []
-        for tr in trs:
-            title = ''.join(tr.css(".small *::text").getall())
-            magnent = tr.css("a[title='Magnet link']::attr(href)").get()
-            data = {'title': title,'magnent':magnent}
-            magnents.append(data)
+        if trs:
+            trs = trs[0:10]
+            for tr in trs:
+                title = ''.join(tr.css(".small *::text").getall())
+                magnent = tr.css("a[title='Magnet link']::attr(href)").get()
+                data = {'title': title,'magnent':magnent}
+                magnents.append(data)
         item = MovieItem()
         item['id'] = id
         item['magnent'] = magnents

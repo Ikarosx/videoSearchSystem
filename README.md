@@ -54,3 +54,11 @@ redis校验用户名，默认为default
 需要调用方法__set_url
 
 `request._set_url(url)`
+
+
+
+#### 爬虫预期应该一次爬完，但每次都有剩余
+
+在遇到403错误时重新请求，但由于请求一样导致被过滤
+
+使用`request.replace(dont_filter=True)`

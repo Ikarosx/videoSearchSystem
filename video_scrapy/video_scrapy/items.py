@@ -8,8 +8,35 @@
 from scrapy import Field,Item
 
 class BangumiItem(Item):
+    # id
     id = Field()
+    # 链接
     url = Field()
+    # 标题
+    title = Field()
+    japanTitle = Field()
+    # 封面
+    cover = Field()
+    # 排名
+    rank = Field()
+    # 评分
+    rate = Field()
+    # 标签
+    tags = Field()
+    staffs = Field()
+    characters = Field()
+    votes = Field()
+    episode = Field()
+
+class BangumiPersonItem(Item):
+    # id
+    id = Field()
+    # 头像
+    avatar = Field()
+    # 名称
+    name = Field()
+    japanName = Field()
+    
 
 class DoubanCelebrityItem(Item):
     id = Field()
@@ -47,10 +74,10 @@ class MovieItem(Item):
     tags = Field()
     # 好评占比
     rateOnWeight = Field()
-    # 导演
-    director = Field()
-    # 编剧
-    scriptWriter = Field()
+    # # 导演
+    # director = Field()
+    # # 编剧
+    # scriptWriter = Field()
     # 类型
     types = Field()
     # 又名
