@@ -73,7 +73,7 @@ class MongoDBPipeline(object):
     def convertTypeItem(self, item):
         # 需要转成int的字段
         ints = ['id', 'votePeopleNum', 'releaseYear',
-                'runtime', 'episode', 'rank', 'votes']
+                'runtime', 'episode', 'rank', 'votes', 'movieId']
         # 需要转成float的字段
         floats = ['rate']
         for intStr in ints:
@@ -99,11 +99,11 @@ class MongoDBPipeline(object):
         data = self.db.douban_rate.find_one({"username": item['username'], "movieId": item['movieId']})
         if not data:
             # 不存在插入
-            logging.debug('插入豆瓣评分数据：%s' % (item['username'] + ':' + item['movieId']))
+            logging.debug('插入豆瓣评分数据：%s' % (item['username'] + ':' + str(item['movieId'])))
             self.db.douban_rate.insert(dict(item))
         else:
             # 存在更新
-            logging.debug('豆瓣评分数据%s存在：' % (item['username'] + ':' + item['movieId']))
+            logging.debug('豆瓣评分数据%s存在：' % (item['username'] + ':' + str(item['movieId'])))
 
     def processBangumiItem(self, item):
         data = self.db.bangumi_video.find_one({"id": item['id']})

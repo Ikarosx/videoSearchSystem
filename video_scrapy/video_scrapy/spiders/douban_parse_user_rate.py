@@ -10,6 +10,8 @@ import json
 from scrapy.utils.project import get_project_settings
 from scrapy.selector import Selector
 import datetime
+import urllib.parse as urlparse
+import urllib
 
 class DoubanParseUserRateSpider(scrapy.Spider):
     name = 'douban_parse_user_rate'
@@ -30,6 +32,9 @@ class DoubanParseUserRateSpider(scrapy.Spider):
         movieId = response.meta['movieId']
         datas = json.loads(response.text)
         selector = Selector(text=datas['html'])
+        if '还没有人写过短评' in selector.css(".comment-item").get():
+            logging.debug("已经没有评论了"  + response.url)
+            return
         comments = selector.css(".comment-item")
         for comment in comments:
             userItem = DoubanUserItem()
@@ -66,5 +71,16 @@ class DoubanParseUserRateSpider(scrapy.Spider):
             comment = comment.css(".comment-content .short::text").get()
             userRateItem['comment'] = comment
             yield userRateItem
-
-  
+            # 已经最后一页了
+        # 更新pageStart
+        # 持续翻页
+        parseResult = urlparse.urlparse(response.url)
+        querys = urlparse.parse_qs(parseResult.query)
+        querys['start'] = [
+            str(int(querys['start'][0]) + self.movieLimit)]
+        querys = {k: v[0] for k, v in querys.items()}
+        querys = urllib.parse.urlencode(querys)
+        requestUrl = parseResult.scheme + "://" + \
+            parseResult.netloc + parseResult.path + "?" + querys
+        yield Request(url=requestUrl, callback=self.parse_user_rate)
+    
