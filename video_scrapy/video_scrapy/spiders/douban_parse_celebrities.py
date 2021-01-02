@@ -2,6 +2,7 @@
 import scrapy
 import pymongo
 import logging
+from scrapy.utils.project import get_project_settings
 from video_scrapy.items import MovieItem, DoubanCelebrityItem
 from scrapy import Request, Spider
 from urllib import parse
@@ -11,12 +12,14 @@ class DoubanParseCelebritiesSpider(scrapy.Spider):
     name = 'douban_parse_celebrities'
     allowed_domains = ['douban.com']
     client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' %
-                                 ('movie', 'newLife2016', '127.0.0.1', '27017', 'movie_system'))
+                                 ('movie', 'newLife2016', '8.129.178.143', '27017', 'movie_system'))
     db = client['movie_system']
 
     def start_requests(self):
         for item in self.db['movie'].find({"actors": {"$exists": False}}):
             yield Request(url=parse.urljoin(item['url'], "celebrities"), callback=self.parse_movie_celebrities, meta={"id": item['id']})
+
+
 
     # 解析演员饰演角色
     def parse_movie_celebrities(self, response):

@@ -27,6 +27,7 @@ class BangumiItem(Item):
     characters = Field()
     votes = Field()
     episode = Field()
+    createTime = Field()
 
 class BangumiPersonItem(Item):
     # id
@@ -36,6 +37,7 @@ class BangumiPersonItem(Item):
     # 名称
     name = Field()
     japanName = Field()
+    createTime = Field()
     
 
 class DoubanCelebrityItem(Item):
@@ -43,6 +45,7 @@ class DoubanCelebrityItem(Item):
     url = Field()
     avatar = Field()
     name = Field()
+    createTime = Field()
 
 class MovieItem(Item):
     # 标题
@@ -96,3 +99,25 @@ class MovieItem(Item):
     site = Field()
     # 磁力种子
     magnent = Field()
+    createTime = Field()
+
+class DoubanUserItem(Item):
+    username = Field()
+    nickname = Field()
+    createTime = Field()
+
+class DoubanRateRelationItem(Item):
+    # 评分用户username
+    username = Field()
+    # 影视ID
+    movieId = Field()
+    # 评分
+    rate = Field()
+    # 评分时间
+    commentTime = Field()
+    # 评分内容
+    content = Field()
+    # 觉得有用的人数
+    voteComment = Field()
+    # 抓取时间
+    createTime = Field()

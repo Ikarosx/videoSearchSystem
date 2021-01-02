@@ -24,18 +24,18 @@ class DoubanIncrementSpider(scrapy.Spider):
     def start_requests(self):
         # 通过 最新 标签
         for tag in self.tags:
-            movieUrl = 'https://movie.douban.com/j/new_search_subjects?tags=%s&sort=&limit=%s&start=0' % (
+            movieUrl = 'https://movie.douban.com/j/search_subjects?type=movie&tag=%s&page_limit=%s&page_start=0' % (
                 tag, self.movieLimit)
             yield Request(url=movieUrl, callback=self.parse_movie_url)
 
     def parse_movie_url(self, response):
         # 加载成dict格式
         data = json.loads(response.text)
-        if "data" not in data:
+        if "subjects" not in data:
             logging.debug("data不存在")
             logging.debug(data)
         # 获取subjects
-        subjects = data["data"]
+        subjects = data["subjects"]
         # 遍历
         for subject in subjects:
             # 过滤掉空值
