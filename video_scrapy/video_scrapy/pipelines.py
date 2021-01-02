@@ -11,32 +11,6 @@ from video_scrapy.items import MovieItem, DoubanCelebrityItem, BangumiItem, Bang
 import time
 import datetime
 
-
-class FilterAndConvertTypePipeline(object):
-    def process_item(self, item, spider):
-        # 去掉为空的
-        item = dict(filter(lambda x: x[1] !=
-                           '' and x[1] != None, item.items()))
-        # 类型转换，转成int和float
-        self.convertTypeItem(item)
-        # 创建时间
-        item['createTime'] = datetime.datetime.fromtimestamp(time.time())
-        return item
-
-    def convertTypeItem(self, item):
-        # 需要转成int的字段
-        ints = ['id', 'votePeopleNum', 'releaseYear',
-                'runtime', 'episode', 'rank', 'votes']
-        # 需要转成float的字段
-        floats = ['rate']
-        for intStr in ints:
-            if intStr in item:
-                item[intStr] = int(item[intStr])
-        for floatStr in floats:
-            if floatStr in item:
-                item[floatStr] = float(item[floatStr])
-
-
 class MongoDBPipeline(object):
     def __init__(self, mongourl, mongoport, mongodb, username, password):
         '''
@@ -73,21 +47,51 @@ class MongoDBPipeline(object):
     def process_item(self, item, spider):
         # 豆瓣电影
         if isinstance(item, MovieItem):
+            self.preProcess(item)
             self.processMovieItem(item)
         # 豆瓣演员
         if isinstance(item, DoubanCelebrityItem):
+            self.preProcess(item)
             self.processDoubanCelebrityItem(item)
         # 豆瓣用户
         if isinstance(item, DoubanUserItem):
+            self.preProcess(item)
             self.processDoubanUser(item)
         # 豆瓣评分
         if isinstance(item, DoubanRateRelationItem):
+            self.preProcess(item)
             self.processDoubanRateRelationItem(item)
         if isinstance(item, BangumiPersonItem):
+            self.preProcess(item)
             self.processBangumiPersonItem(item)
         if isinstance(item, BangumiItem):
+            self.preProcess(item)
             self.processBangumiItem(item)
         
+        return item
+
+    def convertTypeItem(self, item):
+        # 需要转成int的字段
+        ints = ['id', 'votePeopleNum', 'releaseYear',
+                'runtime', 'episode', 'rank', 'votes']
+        # 需要转成float的字段
+        floats = ['rate']
+        for intStr in ints:
+            if intStr in item:
+                item[intStr] = int(item[intStr])
+        for floatStr in floats:
+            if floatStr in item:
+                item[floatStr] = float(item[floatStr])
+
+    def preProcess(self, item):
+        # 去掉为空的
+        item = dict(filter(lambda x: x[1] !=
+                           '' and x[1] != None and x[1] != 'null', item.items()))
+        # 类型转换，转成int和float
+        self.convertTypeItem(item)
+        # 创建时间
+        if 'createTime' in item:
+            item['createTime'] = datetime.datetime.fromtimestamp(time.time())
         return item
 
     # 豆瓣电影评分关系

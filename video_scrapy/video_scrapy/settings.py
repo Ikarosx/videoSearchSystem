@@ -23,6 +23,7 @@ BOT_NAME = 'video_scrapy'
 SPIDER_MODULES = ['video_scrapy.spiders']
 NEWSPIDER_MODULE = 'video_scrapy.spiders'
 RETRY_TIMES = 15
+# 持久化
 # SCHEDULER_PERSIST = True
 DUPEFILTER_DEBUG = True
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
@@ -103,10 +104,7 @@ MONGO_DB = 'movie_system'
 MONGO_USER = 'movie'
 MONGO_PASSWORD = 'newLife2016'
 ITEM_PIPELINES = {
-    'video_scrapy.pipelines.MongoDBPipeline': 300,
-    'video_scrapy.pipelines.DoubanCelebrityItemMongoDBPipeline': 301,
-    'video_scrapy.pipelines.BangumiItemMongoDBPipeline': 302,
-    'video_scrapy.pipelines.BangumiPersonItemMongoDBPipeline': 303
+    'video_scrapy.pipelines.MongoDBPipeline': 300
 }
 USER_AGENTS = [
     "Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; AcooBrowser; .NET CLR 1.1.4322; .NET CLR 2.0.50727)",

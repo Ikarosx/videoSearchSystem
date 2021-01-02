@@ -115,6 +115,8 @@ class DoubanRateRelationItem(Item):
     rate = Field()
     # 评分时间
     commentTime = Field()
+    # 评论
+    comment = Field()
     # 评分内容
     content = Field()
     # 觉得有用的人数

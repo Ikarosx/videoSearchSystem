@@ -55,11 +55,14 @@ class DoubanParseUserRateSpider(scrapy.Spider):
             commentTime = comment.css(".comment-info .comment-time::attr(title)").get()
             commentTime = datetime.datetime.strptime(commentTime,'%Y-%m-%d %H:%M:%S')
             userRateItem['commentTime'] = commentTime
-            result = re.compile(r'allstar(\d)').search(comment.css(".comment-info .rating").get())
-            if result:
-                rate = result.group(1)
-                # 评分，5星则为5分
-                userRateItem['rate'] = rate
+            rating = comment.css(".comment-info .rating").get()
+            # 可能没有评分
+            if rating:
+                result = re.compile(r'allstar(\d)').search(rating)
+                if result:
+                    rate = result.group(1)
+                    # 评分，5星则为5分
+                    userRateItem['rate'] = rate
             comment = comment.css(".comment-content .short::text").get()
             userRateItem['comment'] = comment
             yield userRateItem
