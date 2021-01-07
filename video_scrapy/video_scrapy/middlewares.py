@@ -6,7 +6,6 @@
 # https://doc.scrapy.org/en/latest/topics/spider-middleware.html
 
 from scrapy import signals
-from video_scrapy.settings import USER_AGENTS
 import random
 import string
 import time
@@ -26,6 +25,8 @@ from twisted.internet.endpoints import TCP4ClientEndpoint
 from scrapy.core.downloader.webclient import _parse
 from scrapy.spidermiddlewares.httperror import HttpErrorMiddleware
 from scrapy.exceptions import IgnoreRequest
+from fake_useragent import UserAgent
+
 
 logging.getLogger("urllib3.connectionpool").setLevel(logging.WARNING)
 
@@ -79,12 +80,14 @@ class VideoScrapySpiderMiddleware(object):
 
 
 class RandomUserAgent(object):
+    def __init__(self):
+        self.ua = UserAgent()
+
     """
     换User-Agent
     """
-
     def process_request(self, request, spider):
-        request.headers['User-Agent'] = random.choice(USER_AGENTS)
+        request.headers['User-Agent'] = self.ua.random
 
 
 class MyRetry(RetryMiddleware):
@@ -139,12 +142,14 @@ class VideoScrapyDownloaderMiddleware(object):
         if response.status == 403:
             self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("403删除代理，" + request.meta['proxy'])
+            logging.debug(request.headers)
+            logging.debug(response.headers)
             url = request.url
             if request.url.startswith('https://sec.douban.com/b?r='):
                 url = url.replace('https://sec.douban.com/b?r=','')
                 url = urllib.parse.unquote(url)
             request._set_url(url)
-            logging.debug("新的url" + url)
+            logging.debug("新的url：" + url)
             # 关键，不然会由于请求一样被过滤掉
             return request.replace(dont_filter=True)
             # raise IgnoreRequest("未知403")
@@ -237,9 +242,7 @@ class ProxyMiddleWares(object):
             random.choice(string.ascii_letters + string.digits)
             for x in range(11))
         cookies = {
-            'bid': bid,
-            'dont_redirect': True,
-            'handle_httpstatus_list': [302],
+            'bid': bid
         }
         return cookies
 

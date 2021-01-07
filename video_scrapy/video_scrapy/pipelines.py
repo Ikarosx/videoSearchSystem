@@ -84,14 +84,14 @@ class MongoDBPipeline(object):
                 item[floatStr] = float(item[floatStr])
 
     def preProcess(self, item):
+        # 创建时间
+        item['createTime'] = datetime.datetime.fromtimestamp(time.time())
         # 去掉为空的
         item = dict(filter(lambda x: x[1] !=
                            '' and x[1] != None and x[1] != 'null', item.items()))
         # 类型转换，转成int和float
         self.convertTypeItem(item)
-        # 创建时间
-        if 'createTime' in item:
-            item['createTime'] = datetime.datetime.fromtimestamp(time.time())
+        
         return item
 
     # 豆瓣电影评分关系
@@ -153,7 +153,6 @@ class MongoDBPipeline(object):
             logging.debug('豆瓣用户数据%s存在：' % (item['username']))
 
     # 处理豆瓣演员item
-
     def processDoubanCelebrityItem(self, item):
         data = self.db.douban_celebrity.find_one({"id": item['id']})
         if not data:
@@ -165,46 +164,6 @@ class MongoDBPipeline(object):
             logging.debug('演员数据%s存在' % (item['name']))
             # self.db.douban_celebrity.update_one(
             # {"id": item['id']}, {"$set": dict(item)})
-
-    def close_spider(self, spider):
-        # 关闭数据库
-        self.client.close()
-
-class BangumiItemMongoDBPipeline(object):
-    def __init__(self, mongourl, mongoport, mongodb, username, password):
-        '''
-        初始化mongodb数据的url、端口号、数据库名称
-        '''
-        self.mongourl = mongourl
-        self.mongoport = mongoport
-        self.mongodb = mongodb
-        self.username = username
-        self.password = password
-
-    @classmethod
-    def from_crawler(cls, crawler):
-        """
-        1、读取settings里面的mongodb数据的url、port、DB。
-        """
-        return cls(
-            mongourl=crawler.settings.get("MONGO_URL"),
-            mongoport=crawler.settings.get("MONGO_PORT"),
-            mongodb=crawler.settings.get("MONGO_DB"),
-            username=crawler.settings.get("MONGO_USER"),
-            password=crawler.settings.get("MONGO_PASSWORD")
-        )
-
-    def open_spider(self, spider):
-        '''
-        1、连接mongodb数据
-        '''
-        self.client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' % (
-            self.username, self.password, self.mongourl, self.mongoport, self.mongodb))
-        self.db = self.client[self.mongodb]
-
-    def process_item(self, item, spider):
-        
-        return item
 
     def close_spider(self, spider):
         # 关闭数据库

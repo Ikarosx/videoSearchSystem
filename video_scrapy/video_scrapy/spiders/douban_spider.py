@@ -7,16 +7,16 @@ import logging
 import urllib.parse as urlparse
 import urllib
 import pymongo
-
+from scrapy.utils.project import get_project_settings
 
 class DoubanSpiderSpider(Spider):
     name = 'douban_spider'
     allowed_domains = ['movie.douban.com']
     startUrl = 'https://movie.douban.com/explore'
-
+    settings = get_project_settings()
     client = pymongo.MongoClient('mongodb://%s:%s@%s:%s/?authSource=%s' %
-                                 ('movie', 'newLife2016', '8.129.178.143', '27017', 'movie_system'))
-    db = client['movie_system']
+                                 (settings.get('MONGO_USER'), settings.get('MONGO_PASSWORD'), settings.get('MONGO_URL'), settings.get('MONGO_PORT'), settings.get('MONGO_DB')))
+    db = client[settings.get('MONGO_DB')]
     # 最新爬虫方案：
     # ①找出所有url
     # ②判断数据库中该id是否有评论人数，如果没有跳3，如果有跳4，

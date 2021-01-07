@@ -13,6 +13,7 @@ import datetime
 import urllib.parse as urlparse
 import urllib
 
+
 class DoubanParseUserRateSpider(scrapy.Spider):
     name = 'douban_parse_user_rate'
     allowed_domains = ['movie.douban.com']
@@ -22,18 +23,30 @@ class DoubanParseUserRateSpider(scrapy.Spider):
                                  (settings.get('MONGO_USER'), settings.get('MONGO_PASSWORD'), settings.get('MONGO_URL'), settings.get('MONGO_PORT'), settings.get('MONGO_DB')))
     db = client[settings.get('MONGO_DB')]
 
-
     def start_requests(self):
-        for item in self.db['movie'].find({}):
-            url = 'https://movie.douban.com/subject/%s/comments?start=0&sort=new_score&comments_only=1' % (item['id'])
-            yield Request(url=url, callback=self.parse_user_rate, meta={"movieId": item['id']})
-    
+        for item in self.db['movie'].find({"$or": [{"scan_rate": False}, {"scan_rate": {"$exists": False}}]}):
+            # 如果该电影爬取评论数小于200，就重新爬取
+            count = self.db['douban_rate'].count_documents(
+                {"movieId": item['id']})
+            logging.debug("扫描电影:" + item['title'] + ":" + str(count))
+            if count <= 100:
+                url = 'https://movie.douban.com/subject/%s/comments?start=%s&sort=new_score&comments_only=1' % (
+                    item['id'], count)
+                yield Request(url=url, callback=self.parse_user_rate, meta={"movieId": item['id']})
+            self.db.movie.update_one({"id": item['id']}, {
+                                         "$set": {"scan_rate": True}})
+
     def parse_user_rate(self, response):
         movieId = response.meta['movieId']
-        datas = json.loads(response.text)
+        try:
+            datas = json.loads(response.text)
+        except json.decoder.JSONDecodeError:
+            logging.error("解析json失败" + str(movieId))
+            yield Request(url=response.url, callback=self.parse_user_rate, meta={"movieId": movieId})
+            return
         selector = Selector(text=datas['html'])
         if '还没有人写过短评' in selector.css(".comment-item").get():
-            logging.debug("已经没有评论了"  + response.url)
+            logging.debug("已经没有评论了" + response.url)
             return
         comments = selector.css(".comment-item")
         for comment in comments:
@@ -57,8 +70,10 @@ class DoubanParseUserRateSpider(scrapy.Spider):
             voteComment = comment.css(".vote-count::text").get()
             userRateItem['voteComment'] = voteComment
             # 评分时间
-            commentTime = comment.css(".comment-info .comment-time::attr(title)").get()
-            commentTime = datetime.datetime.strptime(commentTime,'%Y-%m-%d %H:%M:%S')
+            commentTime = comment.css(
+                ".comment-info .comment-time::attr(title)").get()
+            commentTime = datetime.datetime.strptime(
+                commentTime, '%Y-%m-%d %H:%M:%S')
             userRateItem['commentTime'] = commentTime
             rating = comment.css(".comment-info .rating").get()
             # 可能没有评分
@@ -71,16 +86,18 @@ class DoubanParseUserRateSpider(scrapy.Spider):
             comment = comment.css(".comment-content .short::text").get()
             userRateItem['comment'] = comment
             yield userRateItem
-            # 已经最后一页了
+        # 已经最后一页了
         # 更新pageStart
         # 持续翻页
         parseResult = urlparse.urlparse(response.url)
         querys = urlparse.parse_qs(parseResult.query)
-        querys['start'] = [
-            str(int(querys['start'][0]) + self.movieLimit)]
-        querys = {k: v[0] for k, v in querys.items()}
-        querys = urllib.parse.urlencode(querys)
-        requestUrl = parseResult.scheme + "://" + \
-            parseResult.netloc + parseResult.path + "?" + querys
-        yield Request(url=requestUrl, callback=self.parse_user_rate)
-    
+        start = int(querys['start'][0]) + 20
+        # 200以上会403
+        if start <= 200:
+            querys['start'] = [
+                str(start)]
+            querys = {k: v[0] for k, v in querys.items()}
+            querys = urllib.parse.urlencode(querys)
+            requestUrl = parseResult.scheme + "://" + \
+                parseResult.netloc + parseResult.path + "?" + querys
+            yield Request(url=requestUrl, callback=self.parse_user_rate, meta={"movieId": movieId})
