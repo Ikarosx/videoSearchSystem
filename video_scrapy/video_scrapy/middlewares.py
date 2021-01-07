@@ -142,8 +142,6 @@ class VideoScrapyDownloaderMiddleware(object):
         if response.status == 403:
             self.delete_proxy(request.meta['proxy'].split("://")[1])
             logging.debug("403删除代理，" + request.meta['proxy'])
-            logging.debug(request.headers)
-            logging.debug(response.headers)
             url = request.url
             if request.url.startswith('https://sec.douban.com/b?r='):
                 url = url.replace('https://sec.douban.com/b?r=','')
