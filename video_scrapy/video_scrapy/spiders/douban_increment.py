@@ -8,6 +8,7 @@ import logging
 import urllib.parse as urlparse
 import urllib
 import re
+import requests
 from video_scrapy.spiders.douban_spider import DoubanSpiderSpider
 from scrapy.utils.project import get_project_settings
 
@@ -25,6 +26,7 @@ class DoubanIncrementSpider(scrapy.Spider):
     db = client[settings.get('MONGO_DB')]
 
     def start_requests(self):
+        requests.get("http://127.0.0.1:5010/delete_all")
         # 通过 最新 标签
         for tag in self.tags:
             movieUrl = 'https://movie.douban.com/j/search_subjects?type=movie&tag=%s&page_limit=%s&page_start=0' % (
